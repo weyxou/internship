@@ -1,0 +1,45 @@
+package com.example.internship.config;
+
+import com.example.internship.services.UserDetailsImpl;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.Authentication;
+import org.springframework.stereotype.Component;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
+
+import javax.crypto.SecretKey;
+import java.util.Date;
+
+@Component
+public class Jwttokens {
+
+    @Value("${testing.app.secret}")
+    private String secret;
+
+    @Value("${testing.app.time}")
+    private int time;
+
+    private SecretKey getSigningKey() {
+        return Keys.hmacShaKeyFor(secret.getBytes()); // Конвертация строки в секретный ключ
+    }
+
+    public String generateToken(Authentication authentication) {
+        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+        return Jwts.builder()
+                .setSubject(userDetails.getUsername())
+                .setIssuedAt(new Date())
+                .setExpiration(new Date((new Date()).getTime() + time))
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256) // Используем SecretKey
+                .compact();
+    }
+
+    public String getNameFromJwt(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(getSigningKey()) // Настройка парсера с секретным ключом
+                .build()
+                .parseClaimsJws(token) // Парсим JWT
+                .getBody()
+                .getSubject(); // Возвращаем Subject из токена
+    }
+}
