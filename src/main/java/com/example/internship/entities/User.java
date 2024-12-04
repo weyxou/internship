@@ -2,12 +2,17 @@ package com.example.internship.entities;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
+import java.time.LocalDateTime;
 
 @Entity
 @NoArgsConstructor
 @AllArgsConstructor
+@Getter
+@Setter
 @Table(name = "users")
 public class User {
     @Id
@@ -22,4 +27,11 @@ public class User {
 
     @Column(nullable = false)
     private String password;
+
+    LocalDateTime createdAt;
+
+    @PrePersist
+    private void init() {
+        this.createdAt = LocalDateTime.now();
+    }
 }
