@@ -54,6 +54,7 @@ public class SecurityConfig {
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/signin").permitAll()
                         .requestMatchers("/secured/user").fullyAuthenticated()
+                        .requestMatchers("/api/entries/**").authenticated()
                         .anyRequest().permitAll())
                 .addFilterBefore(tokenFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();

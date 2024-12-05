@@ -2,7 +2,6 @@ package com.example.internship.controllers;
 
 import com.example.internship.entities.Entry;
 import com.example.internship.services.EntryService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -11,12 +10,15 @@ import java.util.List;
 @RequestMapping("/api/entries")
 public class EntryController {
 
-    @Autowired
-    private EntryService entryService;
+    private final EntryService entryService;
 
-    @GetMapping("/user/{userId}")
-    public List<Entry> getAllEntries(@PathVariable Long userId) {
-        return entryService.getAllEntries(userId);
+    public EntryController(EntryService entryService) {
+        this.entryService = entryService;
+    }
+
+    @GetMapping
+    public List<Entry> getAllEntries() {
+        return entryService.getAllEntries();
     }
 
     @GetMapping("/{id}")
