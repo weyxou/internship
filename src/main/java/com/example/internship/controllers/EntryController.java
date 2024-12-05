@@ -1,7 +1,10 @@
 package com.example.internship.controllers;
 
 import com.example.internship.entities.Entry;
+import com.example.internship.exceptions.ErrorResponse;
 import com.example.internship.services.EntryService;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -36,8 +39,21 @@ public class EntryController {
         return entryService.updateEntry(id, updatedEntry);
     }
 
+//    @DeleteMapping("/{id}")
+//    public void deleteEntry(@PathVariable Long id) {
+//        entryService.deleteEntry(id);
+//    }
+
     @DeleteMapping("/{id}")
-    public void deleteEntry(@PathVariable Long id) {
+    public ResponseEntity<?> deleteEntry(@PathVariable Long id, @RequestParam(required = false) Boolean confirm) {
+        if (confirm == null || !confirm) {
+            // Формируем кастомный ответ с кодом 400
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse("Confirm deletion with parameter 'confirm=true'."));
+        }
         entryService.deleteEntry(id);
+        return ResponseEntity.ok("Successfully deleted");
     }
+
 }
