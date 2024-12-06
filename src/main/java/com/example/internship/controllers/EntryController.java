@@ -3,8 +3,11 @@ package com.example.internship.controllers;
 import com.example.internship.entities.Entry;
 import com.example.internship.exceptions.ErrorResponse;
 import com.example.internship.services.EntryService;
+import com.example.internship.services.UserDetailsImpl;
+import com.example.internship.services.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -14,46 +17,68 @@ import java.util.List;
 public class EntryController {
 
     private final EntryService entryService;
+    private final UserService userService;
 
-    public EntryController(EntryService entryService) {
+    // Конструктор, который инжектирует EntryService и UserService
+    public EntryController(EntryService entryService, UserService userService) {
         this.entryService = entryService;
+        this.userService = userService;
     }
 
+    // Получить все записи для аутентифицированного пользователя
     @GetMapping
-    public List<Entry> getAllEntries() {
-        return entryService.getAllEntries();
+    public List<Entry> getAllEntries(Authentication authentication) {
+        String email = ((UserDetailsImpl) authentication.getPrincipal()).getEmail(); // Получаем email из аутентификации
+        return entryService.getAllEntries(email);
     }
 
+    // Получить запись по ID
     @GetMapping("/{id}")
-    public Entry getEntryById(@PathVariable Long id) {
-        return entryService.getEntryById(id);
+    public ResponseEntity<Entry> getEntryById(@PathVariable Long id, Authentication authentication) {
+        String email = ((UserDetailsImpl) authentication.getPrincipal()).getEmail(); // Получаем email из аутентификации
+        Entry entry = entryService.getEntryById(id, email);
+        if (entry == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
+        return ResponseEntity.ok(entry);
     }
 
+    // Создать новую запись
     @PostMapping
-    public Entry createEntry(@RequestBody Entry entry) {
-        return entryService.createEntry(entry);
+    public ResponseEntity<Entry> createEntry(@RequestBody Entry entry, Authentication authentication) {
+        String email = ((UserDetailsImpl) authentication.getPrincipal()).getEmail(); // Получаем email из аутентификации
+        Entry createdEntry = entryService.createEntry(entry, email);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdEntry);
     }
 
+    // Обновить запись
     @PutMapping("/{id}")
-    public Entry updateEntry(@PathVariable Long id, @RequestBody Entry updatedEntry) {
-        return entryService.updateEntry(id, updatedEntry);
+    public ResponseEntity<Entry> updateEntry(@PathVariable Long id, @RequestBody Entry updatedEntry, Authentication authentication) {
+        String email = ((UserDetailsImpl) authentication.getPrincipal()).getEmail(); // Получаем email из аутентификации
+        Entry entry = entryService.updateEntry(id, updatedEntry, email);
+        if (entry == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
+        return ResponseEntity.ok(entry);
     }
 
-//    @DeleteMapping("/{id}")
-//    public void deleteEntry(@PathVariable Long id) {
-//        entryService.deleteEntry(id);
-//    }
-
+    // Удалить запись
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteEntry(@PathVariable Long id, @RequestParam(required = false) Boolean confirm) {
+    public ResponseEntity<?> deleteEntry(@PathVariable Long id, @RequestParam(required = false) Boolean confirm, Authentication authentication) {
         if (confirm == null || !confirm) {
-            // Формируем кастомный ответ с кодом 400
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
                     .body(new ErrorResponse("Confirm deletion with parameter 'confirm=true'."));
         }
-        entryService.deleteEntry(id);
-        return ResponseEntity.ok("Successfully deleted");
-    }
 
+        String email = ((UserDetailsImpl) authentication.getPrincipal()).getEmail(); // Получаем email из аутентификации
+        boolean deleted = entryService.deleteEntry(id, email);
+
+        if (deleted) {
+            return ResponseEntity.ok("Successfully deleted");
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ErrorResponse("Entry not found or you don't have permission to delete this entry."));
+        }
+    }
 }

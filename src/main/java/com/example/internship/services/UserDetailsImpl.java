@@ -18,6 +18,14 @@ public class UserDetailsImpl implements UserDetails {
     private String email;
     private String password;
 
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
     public static UserDetailsImpl build(User user) {
         return new UserDetailsImpl(
                 user.getId(),

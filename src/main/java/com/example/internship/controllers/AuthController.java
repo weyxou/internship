@@ -66,8 +66,9 @@ public class AuthController {
     public ResponseEntity<?> signin(@RequestBody SigninDto signinDto) {
         Authentication authentication;
         try {
+            // Используем email для аутентификации
             authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(signinDto.getUsername(), signinDto.getPassword())
+                    new UsernamePasswordAuthenticationToken(signinDto.getEmail(), signinDto.getPassword())
             );
         } catch (BadCredentialsException e) {
             return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);

@@ -27,7 +27,7 @@ public class Jwttokens {
     public String generateToken(Authentication authentication) {
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
         return Jwts.builder()
-                .setSubject(userDetails.getUsername())
+                .setSubject(userDetails.getEmail())  // Используем email вместо username
                 .setIssuedAt(new Date())
                 .setExpiration(new Date((new Date()).getTime() + time))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
@@ -40,6 +40,6 @@ public class Jwttokens {
                 .build()
                 .parseClaimsJws(token)
                 .getBody()
-                .getSubject();
+                .getSubject();  // Получаем email из токена
     }
 }
