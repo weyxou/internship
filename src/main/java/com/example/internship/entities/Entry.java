@@ -7,6 +7,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
@@ -35,7 +37,10 @@ public class Entry {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    private String image;
+    @ElementCollection
+    @CollectionTable(name = "entry_images", joinColumns = @JoinColumn(name = "entry_id"))
+    @Column(name = "image_url")
+    private List<String> images = new ArrayList<>();
 
     @PrePersist
     private void init() {

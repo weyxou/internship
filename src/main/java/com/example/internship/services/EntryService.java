@@ -5,11 +5,24 @@ import com.example.internship.entities.User;
 import com.example.internship.repositories.EntryRepo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @Service
 public class EntryService {
+
+    private static final Logger LOGGER = Logger.getLogger(EntryService.class.getName());
+    private static final String UPLOAD_DIR = "images/"; // Directory for storing images
 
     private final EntryRepo entryRepo;
     private final UserService userService;
@@ -20,42 +33,126 @@ public class EntryService {
         this.userService = userService;
     }
 
-    // Изменение метода для получения записей по email
     public List<Entry> getAllEntries(String email) {
-        User user = userService.findByEmail(email);  // Получаем пользователя по email
-        return entryRepo.findByUserId(user.getId());  // Получаем записи, принадлежащие этому пользователю
+        User user = userService.findByEmail(email);
+        if (user == null) {
+            LOGGER.warning("User not found with email: " + email);
+            return new ArrayList<>();
+        }
+        return entryRepo.findByUserId(user.getId());
     }
 
     public Entry getEntryById(Long id, String email) {
-        User user = userService.findByEmail(email);  // Получаем пользователя по email
+        User user = userService.findByEmail(email);
+        if (user == null) {
+            LOGGER.warning("User not found with email: " + email);
+            return null;
+        }
         return entryRepo.findByIdAndUserId(id, user.getId()).orElse(null);
     }
 
     public Entry createEntry(Entry entry, String email) {
-        User user = userService.findByEmail(email);  // Получаем пользователя по email
-        entry.setUser(user);  // Привязываем запись к пользователю
+        User user = userService.findByEmail(email);
+        if (user == null) {
+            LOGGER.warning("User not found with email: " + email);
+            return null;
+        }
+        entry.setUser(user);
         return entryRepo.save(entry);
     }
 
     public Entry updateEntry(Long id, Entry updatedEntry, String email) {
-        User user = userService.findByEmail(email);  // Получаем пользователя по email
-        Entry entry = entryRepo.findByIdAndUserId(id, user.getId()).orElse(null);
-        if (entry != null) {
-            entry.setTitle(updatedEntry.getTitle());
-            entry.setContent(updatedEntry.getContent());
-            entry.setStatus(updatedEntry.getStatus());
-            return entryRepo.save(entry);
+        Entry existingEntry = getEntryById(id, email);
+        if (existingEntry == null) {
+            LOGGER.warning("Entry not found or access denied for entry ID: " + id);
+            return null;
         }
-        return null;
+
+        existingEntry.setTitle(updatedEntry.getTitle());
+        existingEntry.setContent(updatedEntry.getContent());
+        existingEntry.setStatus(updatedEntry.getStatus());
+
+        return entryRepo.save(existingEntry);
     }
 
     public boolean deleteEntry(Long id, String email) {
-        User user = userService.findByEmail(email);  // Получаем пользователя по email
-        Entry entry = entryRepo.findByIdAndUserId(id, user.getId()).orElse(null);
-        if (entry != null) {
-            entryRepo.delete(entry);
-            return true;
+        Entry existingEntry = getEntryById(id, email);
+        if (existingEntry == null) {
+            LOGGER.warning("Entry not found or access denied for entry ID: " + id);
+            return false;
         }
-        return false;
+
+        entryRepo.delete(existingEntry);
+        return true;
+    }
+
+    public List<String> addImagesToEntry(Long id, List<MultipartFile> images, String email) {
+        Entry entry = getEntryById(id, email);
+        if (entry == null) {
+            LOGGER.warning("Entry not found or access denied for entry ID: " + id);
+            return null;
+        }
+
+        List<String> uploadedImages = new ArrayList<>();
+
+        for (MultipartFile image : images) {
+            try {
+                String fileName = saveImage(image);
+                if (fileName != null) {
+                    uploadedImages.add(fileName);
+                    entry.getImages().add(fileName);
+                }
+            } catch (IllegalArgumentException | IOException e) {
+                LOGGER.log(Level.SEVERE, "Error while processing image upload: " + e.getMessage(), e);
+            }
+        }
+
+        entryRepo.save(entry);
+        return uploadedImages;
+    }
+
+    public boolean deleteImageFromEntry(Long id, String imageUrl, String email) {
+        User user = userService.findByEmail(email);
+        Entry entry = entryRepo.findByIdAndUserId(id, user.getId()).orElse(null);
+
+        // Логирование для диагностики
+        if (entry == null) {
+            System.out.println("Entry not found for user: " + email + ", id: " + id);
+            return false;
+        }
+
+        if (!entry.getImages().contains(imageUrl)) {
+            System.out.println("Image URL not found in entry images: " + imageUrl);
+            return false;
+        }
+
+        entry.getImages().remove(imageUrl);
+        entryRepo.save(entry);
+
+        try {
+            boolean fileDeleted = Files.deleteIfExists(Paths.get(imageUrl));
+            System.out.println("File deletion status: " + fileDeleted);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return true;
+    }
+
+
+    private String saveImage(MultipartFile image) throws IOException {
+        String originalFilename = image.getOriginalFilename();
+        if (originalFilename == null || !originalFilename.contains(".")) {
+            throw new IllegalArgumentException("Invalid file name: " + originalFilename);
+        }
+
+        String fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
+        String fileName = UUID.randomUUID().toString() + fileExtension;
+
+        Path path = Paths.get(UPLOAD_DIR + fileName);
+        Files.createDirectories(path.getParent());
+        Files.write(path, image.getBytes());
+
+        return fileName;
     }
 }

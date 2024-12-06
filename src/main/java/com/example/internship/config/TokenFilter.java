@@ -37,28 +37,28 @@ public class TokenFilter extends OncePerRequestFilter {
         try {
             String headerAuth = request.getHeader("Authorization");
             if (headerAuth != null && headerAuth.startsWith("Bearer ")) {
-                jwt = headerAuth.substring(7); // Извлечение токена
-                System.out.println("JWT Token: " + jwt); // Логируем токен
+                jwt = headerAuth.substring(7);
+                System.out.println("JWT Token: " + jwt);
             }
 
             if (jwt != null) {
                 try {
-                    email = jwttokens.getNameFromJwt(jwt); // Получаем email из токена
-                    System.out.println("Extracted email from JWT: " + email); // Логируем email
+                    email = jwttokens.getNameFromJwt(jwt);
+                    System.out.println("Extracted email from JWT: " + email);
                 } catch (ExpiredJwtException e) {
-                    System.out.println("Token expired: " + e.getMessage()); // Логируем ошибку истекшего токена
+                    System.out.println("Token expired: " + e.getMessage());
                 }
 
                 if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                     userDetails = userDetailsService.loadUserByUsername(email);
-                    System.out.println("Loading user by email: " + email); // Логируем загрузку пользователя
+                    System.out.println("Loading user by email: " + email);
                     auth = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                    SecurityContextHolder.getContext().setAuthentication(auth); // Устанавливаем аутентификацию в контекст
+                    SecurityContextHolder.getContext().setAuthentication(auth);
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();  // Логируем все ошибки
+            e.printStackTrace();
         }
-        filterChain.doFilter(request, response);  // Продолжаем фильтрацию
+        filterChain.doFilter(request, response);
     }
 }
