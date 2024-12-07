@@ -107,6 +107,7 @@ public class EntryService {
         }
 
         entryRepo.save(entry);
+        LOGGER.info("Images successfully added to entry. Current images: " + entry.getImages());
         return uploadedImages;
     }
 
@@ -118,16 +119,18 @@ public class EntryService {
             return false;
         }
 
-        if (!entry.getImages().contains(imageUrl)) {
-            LOGGER.warning("Image URL not found in entry images: " + imageUrl);
+        // Убедимся, что сравниваем только имя файла
+        String fileName = imageUrl.replace("images/", "");
+        if (!entry.getImages().contains(fileName)) {
+            LOGGER.warning("Image file name not found in entry images: " + fileName);
             return false;
         }
 
-        entry.getImages().remove(imageUrl);
+        entry.getImages().remove(fileName);
         entryRepo.save(entry);
 
-        Path filePath = Paths.get(UPLOAD_DIR + imageUrl);
-        LOGGER.info("Attempting to delete file: " + filePath.toString());
+        Path filePath = Paths.get(UPLOAD_DIR, fileName);
+        LOGGER.info("Attempting to delete file: " + filePath.toAbsolutePath());
 
         try {
             boolean fileDeleted = Files.deleteIfExists(filePath);
@@ -140,8 +143,6 @@ public class EntryService {
         return true;
     }
 
-
-
     private String saveImage(MultipartFile image) throws IOException {
         String originalFilename = image.getOriginalFilename();
         if (originalFilename == null || !originalFilename.contains(".")) {
@@ -151,10 +152,12 @@ public class EntryService {
         String fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
         String fileName = UUID.randomUUID().toString() + fileExtension;
 
-        Path path = Paths.get(UPLOAD_DIR + fileName);
+        Path path = Paths.get(UPLOAD_DIR, fileName);
+        LOGGER.info("Saving file: " + fileName + " at path: " + path.toAbsolutePath());
         Files.createDirectories(path.getParent());
         Files.write(path, image.getBytes());
 
         return fileName;
     }
+
 }
