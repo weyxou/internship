@@ -13,7 +13,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -22,7 +21,7 @@ import java.util.logging.Logger;
 public class EntryService {
 
     private static final Logger LOGGER = Logger.getLogger(EntryService.class.getName());
-    private static final String UPLOAD_DIR = "images/"; // Directory for storing images
+    private static final String UPLOAD_DIR = "images/";
 
     private final EntryRepo entryRepo;
     private final UserService userService;
@@ -114,30 +113,33 @@ public class EntryService {
     public boolean deleteImageFromEntry(Long id, String imageUrl, String email) {
         User user = userService.findByEmail(email);
         Entry entry = entryRepo.findByIdAndUserId(id, user.getId()).orElse(null);
-
-        // Логирование для диагностики
         if (entry == null) {
-            System.out.println("Entry not found for user: " + email + ", id: " + id);
+            LOGGER.warning("Entry not found for user: " + email + ", id: " + id);
             return false;
         }
 
         if (!entry.getImages().contains(imageUrl)) {
-            System.out.println("Image URL not found in entry images: " + imageUrl);
+            LOGGER.warning("Image URL not found in entry images: " + imageUrl);
             return false;
         }
 
         entry.getImages().remove(imageUrl);
         entryRepo.save(entry);
 
+        Path filePath = Paths.get(UPLOAD_DIR + imageUrl);
+        LOGGER.info("Attempting to delete file: " + filePath.toString());
+
         try {
-            boolean fileDeleted = Files.deleteIfExists(Paths.get(imageUrl));
-            System.out.println("File deletion status: " + fileDeleted);
+            boolean fileDeleted = Files.deleteIfExists(filePath);
+            LOGGER.info("File deletion status: " + fileDeleted);
         } catch (IOException e) {
+            LOGGER.severe("Error deleting file: " + e.getMessage());
             e.printStackTrace();
         }
 
         return true;
     }
+
 
 
     private String saveImage(MultipartFile image) throws IOException {

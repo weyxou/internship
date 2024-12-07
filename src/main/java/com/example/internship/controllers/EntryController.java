@@ -97,7 +97,7 @@ public class EntryController {
         return ResponseEntity.ok(uploadedImages);
     }
 
-    @DeleteMapping("/{id}/images/{fileName}")
+    @DeleteMapping(value = "/{id}/images/{fileName}")
     public ResponseEntity<?> deleteImage(@PathVariable Long id,
                                          @PathVariable String fileName,
                                          Authentication authentication) {
@@ -112,6 +112,7 @@ public class EntryController {
 
         return ResponseEntity.ok("Image successfully deleted.");
     }
+
 
     @GetMapping("/{id}/images/{fileName}")
     public ResponseEntity<?> downloadImage(@PathVariable Long id, @PathVariable String fileName) {
