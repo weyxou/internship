@@ -17,6 +17,8 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
 @EnableWebSecurity
@@ -41,6 +43,17 @@ public class SecurityConfig {
     }
 
     @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration corsConfig = new CorsConfiguration();
+        corsConfig.addAllowedOrigin("*"); // Разрешаем все источники (или укажите конкретные домены)
+        corsConfig.addAllowedMethod("*"); // Разрешаем все HTTP методы (GET, POST, PUT, DELETE)
+        corsConfig.addAllowedHeader("*"); // Разрешаем все заголовки
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", corsConfig);
+        return source;
+    }
+
+    @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
                 .cors(httpSecurityCorsConfigurer ->
@@ -54,9 +67,10 @@ public class SecurityConfig {
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/signin").permitAll()
                         .requestMatchers("/secured/user").fullyAuthenticated()
-                        .requestMatchers("/api/entries/**").authenticated()
+                        .requestMatchers("/api/entries/**").permitAll()
                         .anyRequest().permitAll())
                 .addFilterBefore(tokenFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
+
     }
 }
