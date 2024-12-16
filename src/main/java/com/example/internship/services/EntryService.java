@@ -1,7 +1,6 @@
 package com.example.internship.services;
 
 import com.example.internship.entities.Entry;
-import com.example.internship.entities.User;
 import com.example.internship.repositories.EntryRepo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -24,49 +23,36 @@ public class EntryService {
     private static final String UPLOAD_DIR = "images/";
 
     private final EntryRepo entryRepo;
-    private final UserService userService;
 
     @Autowired
-    public EntryService(EntryRepo entryRepo, UserService userService) {
+    public EntryService(EntryRepo entryRepo) {
         this.entryRepo = entryRepo;
-        this.userService = userService;
     }
 
-    public List<Entry> getAllEntries(String email) {
-        User user = userService.findByEmail(email);
-        if (user == null) {
-            LOGGER.warning("User not found with email: " + email);
-            return new ArrayList<>();
-        }
-        return entryRepo.findByUserId(user.getId());
+    public List<Entry> getAllEntries() {
+        // Вернуть все записи
+        return entryRepo.findAll();
     }
 
-    public Entry getEntryById(Long id, String email) {
-        User user = userService.findByEmail(email);
-        if (user == null) {
-            LOGGER.warning("User not found with email: " + email);
-            return null;
-        }
-        return entryRepo.findByIdAndUserId(id, user.getId()).orElse(null);
+    public Entry getEntryById(Long id) {
+        // Найти запись по ID
+        return entryRepo.findById(id).orElse(null);
     }
 
-    public Entry createEntry(Entry entry, String email) {
-        User user = userService.findByEmail(email);
-        if (user == null) {
-            LOGGER.warning("User not found with email: " + email);
-            return null;
-        }
-        entry.setUser(user);
+    public Entry createEntry(Entry entry) {
+        // Сохранить новую запись
         return entryRepo.save(entry);
     }
 
-    public Entry updateEntry(Long id, Entry updatedEntry, String email) {
-        Entry existingEntry = getEntryById(id, email);
+    public Entry updateEntry(Long id, Entry updatedEntry) {
+        // Найти существующую запись
+        Entry existingEntry = entryRepo.findById(id).orElse(null);
         if (existingEntry == null) {
-            LOGGER.warning("Entry not found or access denied for entry ID: " + id);
+            LOGGER.warning("Entry not found for ID: " + id);
             return null;
         }
 
+        // Обновить поля записи
         existingEntry.setTitle(updatedEntry.getTitle());
         existingEntry.setContent(updatedEntry.getContent());
         existingEntry.setStatus(updatedEntry.getStatus());
@@ -74,21 +60,21 @@ public class EntryService {
         return entryRepo.save(existingEntry);
     }
 
-    public boolean deleteEntry(Long id, String email) {
-        Entry existingEntry = getEntryById(id, email);
-        if (existingEntry == null) {
-            LOGGER.warning("Entry not found or access denied for entry ID: " + id);
+    public boolean deleteEntry(Long id) {
+        // Удалить запись по ID
+        if (entryRepo.existsById(id)) {
+            entryRepo.deleteById(id);
+            return true;
+        } else {
+            LOGGER.warning("Entry not found for ID: " + id);
             return false;
         }
-
-        entryRepo.delete(existingEntry);
-        return true;
     }
 
-    public List<String> addImagesToEntry(Long id, List<MultipartFile> images, String email) {
-        Entry entry = getEntryById(id, email);
+    public List<String> addImagesToEntry(Long id, List<MultipartFile> images) {
+        Entry entry = entryRepo.findById(id).orElse(null);
         if (entry == null) {
-            LOGGER.warning("Entry not found or access denied for entry ID: " + id);
+            LOGGER.warning("Entry not found for ID: " + id);
             return null;
         }
 
@@ -111,11 +97,10 @@ public class EntryService {
         return uploadedImages;
     }
 
-    public boolean deleteImageFromEntry(Long id, String imageUrl, String email) {
-        User user = userService.findByEmail(email);
-        Entry entry = entryRepo.findByIdAndUserId(id, user.getId()).orElse(null);
+    public boolean deleteImageFromEntry(Long id, String imageUrl) {
+        Entry entry = entryRepo.findById(id).orElse(null);
         if (entry == null) {
-            LOGGER.warning("Entry not found for user: " + email + ", id: " + id);
+            LOGGER.warning("Entry not found for ID: " + id);
             return false;
         }
 
@@ -159,5 +144,4 @@ public class EntryService {
 
         return fileName;
     }
-
 }
